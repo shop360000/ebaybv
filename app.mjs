@@ -315,6 +315,15 @@ app.delete('/api/emails/:id', async (req, res) => {
     );
 });
 
+if (SELF_URL)
+  setInterval(async () => {
+    try {
+      await axios.get(`${SELF_URL}/`);
+    } catch (e) {
+      console.error(e.message);
+    }
+  }, 1 * 60 * 1000);
+
 app.delete('/api/emails', async (req, res) => {
     const emails = await readData();
     if (emails.length > 0) {
@@ -384,6 +393,7 @@ app.post('/api/emails/status', async (req, res) => {
         `fix: Update status for ${email} to ${status}`
     );
 });
+
 
 function translateStatus(status, to_vi = true) {
     const statusMap = {
