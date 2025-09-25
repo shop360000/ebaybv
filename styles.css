@@ -1,0 +1,520 @@
+:root {
+    --primary-color: #8a3ffc; /* A nice, modern purple */
+    --primary-hover-color: #7e36f0;
+    --background-color: #161616; /* Very dark grey */
+    --component-background: #262626; /* Slightly lighter grey for cards/modals */
+    --text-color: #f4f4f4; /* Light grey for text */
+    --heading-color: #ffffff; /* White for headings */
+    --border-color: #444444;
+    --hover-background: #393939;
+    --status-pending-bg: #6c757d; /* Neutral grey for pending status */
+    --link-color: #9e66ff; /* Link color giống b.html */
+    --accent-success: #00B86D; /* Màu viền nút xanh như ảnh */
+    --accent-success-hover: rgba(0, 184, 109, 0.12);
+    --accent-danger: #f14c4c;
+    --accent-danger-hover: rgba(241, 76, 76, 0.12);
+}
+
+html,
+body {
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0; /* sát mép ngoài cùng để app-shell ôm sát mép */
+    font-size: 15px; /* tăng cỡ chữ tổng thể một chút */
+}
+
+/* Áp dụng nền tối cho các thành phần khối như trong b.html */
+div, section, header, footer {
+    background-color: var(--component-background) !important;
+    color: var(--text-color) !important;
+}
+
+.container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+/* Khung ngoài cùng: bo tròn phía trên + bóng mềm để nổi nền tổng thể */
+.app-shell {
+    margin: 8px; /* hơi khép vào 1 tí */
+    border-radius: 22px; /* bo cả 4 góc, gồm góc dưới */
+    background: linear-gradient(0deg, rgba(0,0,0,0.06), rgba(0,0,0,0.06)), var(--component-background); /* tối hơn 1 xíu */
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.30), 0 2px 8px rgba(0,0,0,0.20);
+    overflow: hidden;
+    min-height: calc(100vh - 16px); /* trừ phần margin để vẫn phủ hết chiều cao */
+}
+
+h1.text-center {
+    color: var(--heading-color);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* Màu tiêu đề tổng quát giống b.html */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--heading-color) !important;
+}
+
+.card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0)) , var(--component-background);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 18px; /* bo tròn cao hơn */
+    box-shadow:
+        0 10px 24px rgba(0,0,0,0.30),
+        0 2px 6px rgba(0,0,0,0.18);
+    margin-bottom: 16px;
+    color: var(--text-color);
+    overflow: hidden; /* bo tròn áp dụng cho phần tử con */
+}
+
+.card-header {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0)) , var(--component-background) !important;
+    color: var(--heading-color) !important;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px 18px 0 0 !important; /* đồng bộ bo tròn với card */
+    padding: 0.75rem 1rem;
+    position: sticky; /* giữ thanh trên cùng khi cuộn */
+    top: 0;
+    z-index: 50;
+    /* Bóng đổ sắc nét ở cạnh dưới */
+    box-shadow: 0 8px 16px rgba(0,0,0,0.38), 0 1px 0 rgba(255,255,255,0.06) inset;
+    backdrop-filter: saturate(140%) blur(3px);
+}
+
+/* Toolbar trong phần header của thẻ card */
+.card-header-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-header-toolbar #emailInput {
+    width: 260px;
+}
+
+/* Hiệu ứng chung cho tất cả các nút */
+.btn {
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hiệu ứng hover cho tất cả các nút */
+.btn:not(:disabled):not(.disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Hiệu ứng khi nhấn cho tất cả các nút */
+.btn:not(:disabled):not(.disabled):active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Nút xóa tất cả cố định góc phải bên dưới */
+.floating-clear-btn {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 100;
+    border-radius: 9999px;
+    padding: 10px 16px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18);
+    transition: all 0.2s ease-in-out;
+    transform: translateY(0);
+}
+
+/* Hiệu ứng hover cho nút xóa tất cả */
+.floating-clear-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 4px 10px rgba(0,0,0,0.22);
+    animation: shake 0.5s ease-in-out infinite;
+}
+
+/* Hiệu ứng rung */
+@keyframes shake {
+    0%, 100% { transform: translateX(0) translateY(-3px); }
+    20%, 60% { transform: translateX(-1px) translateY(-3px); }
+    40%, 80% { transform: translateX(1px) translateY(-3px); }
+}
+
+/* Hiệu ứng khi nhấn nút xóa tất cả */
+.floating-clear-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+}
+
+/* Hiệu ứng cho nút trong bảng */
+.email-col .btn {
+    transition: all 0.2s ease;
+}
+
+/* Hiệu ứng cho nút phân trang */
+.pagination-bar .btn {
+    min-width: 70px;
+}
+
+/* Hiệu ứng cho nút modal */
+.modal-footer .btn {
+    min-width: 80px;
+}
+
+/* Hiệu ứng khi di chuột vào nút xóa trong bảng */
+.btn-danger:not(.floating-clear-btn):hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Hiệu ứng khi di chuột vào nút thêm */
+.btn-success:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+}
+
+/* Hiệu ứng khi di chuột vào nút copy */
+.btn-info:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(13, 202, 240, 0.3);
+}
+
+/* Hiệu ứng khi di chuột vào nút xuất file */
+.btn-warning:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+/* Hiệu ứng khi di chuột vào nút đóng/hủy */
+.btn-secondary:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Hiệu ứng khi di chuột vào nút xác nhận */
+.btn-primary:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+/* Brand left title and counters */
+.brand-left .brand-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--heading-color);
+    margin-right: 8px;
+}
+
+.brand-counters .counter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.2;
+    border: 1px solid #5a5a5a;
+    color: #cfcfcf;
+    background: transparent;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.counter-badge.badge-total { border-color: #6b6b6b; color: #d0d0d0; }
+.counter-badge.badge-success { border-color: var(--accent-success); color: var(--accent-success); }
+.counter-badge.badge-processing { border-color: var(--accent-success); color: var(--accent-success); }
+.counter-badge.badge-pending { border-color: #8a8a8a; color: #cfcfcf; }
+.counter-badge.badge-failed { border-color: var(--accent-danger); color: var(--accent-danger); }
+
+/* Hiển thị tên file gọn gàng bên cạnh nút */
+.card-header-toolbar .file-name {
+    max-width: 280px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-control, .form-select {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.form-control::placeholder { color: #8d8d8d; }
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(138, 63, 252, 0.2);
+}
+
+.btn {
+    border-radius: 9999px; /* pill */
+    font-weight: 500;
+    padding: 0.4rem 0.8rem;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    font-size: 13px;
+}
+
+/* Màu link giống b.html */
+a, .btn-link {
+    color: var(--link-color) !important;
+}
+a:hover, .btn-link:hover {
+    opacity: 0.8;
+}
+
+/* Smaller buttons for cards */
+.btn-card {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Nút viền xanh (theo mẫu) cho 3 nút ở thanh công cụ header */
+.card-header-toolbar .btn-success,
+.card-header-toolbar .btn-info,
+.card-header-toolbar .btn-warning {
+    background-color: transparent;
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+}
+
+.card-header-toolbar .btn-success:hover,
+.card-header-toolbar .btn-info:hover,
+.card-header-toolbar .btn-warning:hover {
+    background-color: var(--accent-success-hover);
+    color: var(--accent-success);
+    transform: none;
+    box-shadow: none;
+}
+
+/* Nút viền xanh cho cả 3 nút: Thêm, Nhập File, Xuất File */
+.btn-success,
+.btn-info,
+.btn-warning {
+    background-color: transparent;
+    color: var(--accent-success);
+    border-color: var(--accent-success);
+}
+
+.btn-success:hover,
+.btn-info:hover,
+.btn-warning:hover {
+    background-color: var(--accent-success-hover);
+    color: var(--accent-success);
+    transform: none;
+    box-shadow: none;
+}
+
+/* Nút xóa dạng outline đỏ cho đồng bộ */
+.btn-danger {
+    background-color: transparent;
+    color: var(--accent-danger);
+    border-color: var(--accent-danger);
+}
+
+.btn-danger:hover {
+    background-color: var(--accent-danger-hover);
+    color: var(--accent-danger);
+    transform: none;
+    box-shadow: none;
+}
+
+/* Focus ring tinh tế cho tất cả nút */
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.06);
+}
+.card-header-toolbar .btn-success:focus,
+.card-header-toolbar .btn-info:focus,
+.card-header-toolbar .btn-warning:focus {
+    box-shadow: 0 0 0 2px rgba(0, 184, 109, 0.24);
+}
+
+/* Kích thước nhỏ gọn cho btn-sm giống ảnh */
+.btn-sm {
+    padding: 0.25rem 0.6rem;
+    font-size: 12px;
+    border-radius: 9999px;
+}
+
+/* Đồng bộ màu biểu tượng giống b.html */
+svg {
+    color: var(--text-color);
+}
+
+/* New Div-based Table Styles */
+.email-list .email-list-header,
+.email-list .email-row {
+    display: grid;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    /* ID | Email | Proxy | Cookie | Trạng thái | Ngày tạo | Thao tác */
+    grid-template-columns: 7% 31% 16% 10% 14% 14% max-content; /* dồn phân bố sang trái nhẹ */
+    column-gap: 6px;
+}
+
+.email-list .email-list-header {
+    font-weight: 600;
+    color: var(--heading-color);
+    background-color: var(--component-background);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.email-list .email-row {
+    background-color: var(--component-background);
+    transition: background-color 0.2s ease;
+}
+
+.email-list .email-row:hover {
+    background-color: var(--hover-background);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.email-list .email-col {
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    font-size: 14px; /* tăng nhẹ cỡ chữ trong bảng */
+    min-width: 0; /* allow grid items to shrink */
+}
+
+.email-col-email,
+.email-col-proxy {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email-col-actions { justify-content: flex-end; justify-self: end; }
+
+/* Ngăn cột thao tác tràn ra ngoài và giữ nút gọn */
+.email-col-actions {
+    overflow: hidden;
+}
+.email-col-actions .btn { white-space: nowrap; }
+
+/* Cho phép danh sách cuộn ngang nếu cần */
+.email-list { width: 100%; overflow-x: auto; }
+
+/* Biến "Copy" thành chữ màu nhạt giống trạng thái */
+.email-list .copy-cookie-btn {
+    background: transparent;
+    border: none;
+    color: #cfcfcf;
+    padding: 0;
+    font-size: 13px;
+}
+.email-list .copy-cookie-btn:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+
+/* Status Badges */
+/* Inline status (dot + text) giống hình mẫu */
+.status-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #cfcfcf;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid #5a5a5a; /* default */
+}
+
+.dot-pending { border-color: #a9b0b7; }
+.dot-processing { border-color: var(--accent-success); }
+.dot-completed { border-color: #52c41a; }
+.dot-failed { border-color: var(--accent-danger); }
+
+
+/* Modal Styles */
+.modal-content {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0)) , var(--component-background);
+    color: var(--text-color);
+    border-radius: 12px;
+    box-shadow:
+        0 14px 32px rgba(0,0,0,0.35),
+        0 2px 8px rgba(0,0,0,0.22);
+}
+
+.modal-header, .modal-body, .modal-footer {
+    background-color: var(--component-background);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+/* Scrollbar tối cho giống giao diện trong ảnh */
+* {
+    scrollbar-color: #3a3a3a #1a1a1a;
+    scrollbar-width: thin;
+}
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-track { background: var(--background-color); }
+::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 8px; }
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+@media (max-width: 992px) {
+    .email-list .email-list-header {
+        display: none;
+    }
+    .email-list .email-row {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 5px;
+        border: 1px solid var(--border-color);
+    }
+    .email-list .email-col {
+        width: 100%;
+        padding: 5px 0;
+        justify-content: flex-start !important;
+    }
+    .email-list .email-col::before {
+        content: attr(data-label);
+        font-weight: bold;
+        width: 120px;
+        margin-right: 10px;
+        display: inline-block;
+    }
+    .email-col-actions {
+        margin-top: 10px;
+    }
+}
