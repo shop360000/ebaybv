@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import pg from 'pg';
 import { dirname } from 'path';
 import multer from 'multer';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
