@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bs-body-bg: #1a1a1a;
+            --bs-body-color: #e0e0e0;
+            --bs-dark-bg: #1e1e1e;
+            --bs-darker-bg: #121212;
+            --bs-primary: #0d6efd;
+            --bs-secondary: #6c757d;
+        }
+        
+        body { 
+            padding: 20px;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+        }
+        
+        .card {
+            background-color: var(--bs-dark-bg);
+            border: 1px solid #333;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-header {
+            background-color: var(--bs-darker-bg) !important;
+            border-bottom: 1px solid #333;
+        }
+        
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--bs-body-color);
+            --bs-table-border-color: #444;
+        }
+        
+        .table-hover > tbody > tr:hover {
+            --bs-table-bg: rgba(255, 255, 255, 0.05);
+        }
+        
+        .form-control, .form-select {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: #3d3d3d;
+            color: #fff;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .btn-outline-primary {
+            --bs-btn-color: #0d6efd;
+            --bs-btn-border-color: #0d6efd;
+            --bs-btn-hover-bg: #0d6efd;
+            --bs-btn-hover-border-color: #0d6efd;
+            --bs-btn-active-bg: #0b5ed7;
+            --bs-btn-active-border-color: #0a58ca;
+        }
+        
+        .status-indicator { 
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            box-shadow: 0 0 5px currentColor;
+        }
+        
+        .status-up { 
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-down { 
+            background-color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-unknown { 
+            background-color: #6c757d;
+            opacity: 0.7;
+        }
+        
+        .ping-time { 
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="mb-4">Ping Manager</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <i class="bi bi-plus-circle"></i> Add New Ping Target
+            </div>
+            <div class="card-body">
+                <form id="addPingForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="url" class="form-label">URL</label>
+                            <input type="url" class="form-control" id="url" required 
+                                   placeholder="https://example.com" value="https://openbullet2-docs-latest.onrender.com">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="proxy" class="form-label">Proxy (optional)</label>
+                            <input type="text" class="form-control" id="proxy" 
+                                   placeholder="http://user:pass@proxy:port">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> Ping Targets</span>
+                <button id="refreshBtn" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-dark">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>URL</th>
+                                <th>Last Ping</th>
+                                <th>Response Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pingList">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let pingConfigs = [];
+
+        // Format date to readable string
+        function formatDate(dateString) {
+            if (!dateString) return 'Never';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // Format response time
+        function formatResponseTime(ms) {
+            if (!ms && ms !== 0) return '-';
+            return `${ms} ms`;
+        }
+
+        // Get status badge HTML
+        function getStatusBadge(status) {
+            if (status >= 200 && status < 400) {
+                return '<span class="status-indicator status-up" title="Up"></span>';
+            } else if (status === 'error' || (status >= 400)) {
+                return '<span class="status-indicator status-down" title="Down"></span>';
+            }
+            return '<span class="status-indicator status-unknown" title="Unknown"></span>';
+        }
+
+        // Load ping configurations
+        async function loadPingConfigs() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/ping/configs`);
+                if (!response.ok) throw new Error('Failed to load ping configs');
+                pingConfigs = await response.json();
+                renderPingList();
+            } catch (error) {
+                console.error('Error loading ping configs:', error);
+                document.getElementById('pingList').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            Error loading ping configurations: ${error.message}
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        // Render ping list
+        function renderPingList() {
+            const tbody = document.getElementById('pingList');
+            
+            if (pingConfigs.data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No ping targets found. Add one above.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pingConfigs.data.map(config => `
+                <tr data-id="${config.id}">
+                    <td>${getStatusBadge(config.last_status)}</td>
+                    <td>
+                        <a href="${config.url}" target="_blank" class="text-decoration-none">
+                            ${config.url}
+                        </a>
+                        ${config.proxy ? `<br><small class="text-muted">Proxy: ${config.proxy}</small>` : ''}
+                    </td>
+                    <td>${formatDate(config.last_pinged)}</td>
+                    <td class="ping-time">${formatResponseTime(config.response_time)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary test-ping" title="Test Now">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary toggle-ping" 
+                                    data-active="${config.is_active}"
+                                    title="${config.is_active ? 'Disable' : 'Enable'}">
+                                <i class="bi ${config.is_active ? 'bi-pause' : 'bi-play'}"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-ping" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Add event listeners
+            document.querySelectorAll('.test-ping').forEach(btn => {
+                btn.addEventListener('click', testPing);
+            });
+            document.querySelectorAll('.toggle-ping').forEach(btn => {
+                btn.addEventListener('click', togglePing);
+            });
+            document.querySelectorAll('.delete-ping').forEach(btn => {
+                btn.addEventListener('click', deletePing);
+            });
+        }
+
+        // Add new ping target
+        async function addPing(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value.trim();
+            const proxy = document.getElementById('proxy').value.trim() || null;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/ping/configs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, proxy })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to add ping target');
+                }
+                
+                // Reset form
+                document.getElementById('addPingForm').reset();
+                // Reload the list
+                await loadPingConfigs();
+                
+                // Show success message
+                alert('Ping target added successfully!');
+            } catch (error) {
+                console.error('Error adding ping target:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Test ping immediately
+        async function testPing(e) {
+            const row = e.target.closest('tr');
+            const id = row.dataset.id;
+            const testBtn = e.target.closest('.test-ping');
+            
+            // Show loading state
+            const originalHtml = testBtn.innerHTML;
+            testBtn.disabled = true;
+            testBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+            
+            try {
+                // In a real implementation, you would call your API to test the ping
+                // For now, we'll just simulate a delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Reload the list to show updated status
+                await loadPingConfigs();
+            } catch (error) {
+                console.error('Error testing ping:', error);
+                alert('Error testing ping. Please try again.');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = originalHtml;
+            }
+        }
+
+        // Toggle ping active state
+        async function togglePing(e) {
+            const row = e.target.closest('tr');
+            const id = row.dataset.id;
+            const isActive = e.target.closest('.toggle-ping').dataset.active === 'true';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/ping/configs/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: !isActive })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to update ping target');
+                }
+                
+                // Reload the list
+                await loadPingConfigs();
+            } catch (error) {
+                console.error('Error toggling ping:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Delete ping target
+        async function deletePing(e) {
+            if (!confirm('Are you sure you want to delete this ping target?')) {
+                return;
+            }
+            
+            const row = e.target.closest('tr');
+            const id = row.dataset.id;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/ping/configs/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete ping target');
+                }
+                
+                // Remove the row from the UI
+                row.remove();
+                
+                // If no more items, show empty message
+                if (document.querySelectorAll('#pingList tr').length === 0) {
+                    document.getElementById('pingList').innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                No ping targets found. Add one above.
+                            </td>
+                        </tr>`;
+                }
+            } catch (error) {
+                console.error('Error deleting ping target:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial data
+            loadPingConfigs();
+            
+            // Set up form submission
+            document.getElementById('addPingForm').addEventListener('submit', addPing);
+            
+            // Set up refresh button
+            document.getElementById('refreshBtn').addEventListener('click', loadPingConfigs);
+            
+            // Auto-refresh every 30 seconds
+            setInterval(loadPingConfigs, 30000);
+        });
+    </script>
+</body>
+</html>
