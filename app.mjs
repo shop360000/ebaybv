@@ -1,229 +1,213 @@
+// ======================= IMPORTS =======================
 import express from "express";
-import fs from "fs";
-import cors from "cors";
-import path from "path";
+import fs from "fs/promises";
 import axios from "axios";
-import bodyParser from "body-parser";
 
-// ================== Cấu hình ==================
-const PORT = process.env.PORT || 10000;
-const DATA_FILE = "emails.json";
-
-const GITHUB_TOKEN = "ghp_xxxxx"; // ⚠️ thay bằng token của bạn
-const USERNAME = "angadresmatomasante-spec";
-const REPO = "RENDER";
-const BRANCH = "main";
-const FILEPATH = "emails.json";
-
-// ================== Khởi tạo server ==================
+// ======================= CONFIG =======================
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(".")); // phục vụ index.html
+const PORT = process.env.PORT || 10000;
+const SELF_URL = "https://server-ebay-database.onrender.com/";
 
-// ================== Hàm đọc/ghi file ==================
-function readData() {
-  if (fs.existsSync(DATA_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-    } catch (e) {
-      return [];
+// --- GitHub Credentials (giữ nguyên như code gốc) ---
+const GITHUB_TOKEN = "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";
+const GITHUB_USER = "angadresmatomasante-spec";
+const GITHUB_REPO = "RENDER";
+const BRANCH = "main";
+
+// URL Store
+const URL_STORE_FILE = "urls.json";
+const URL_EXPIRATION_MS = 5 * 60 * 1000; // 5 phút
+let lastUrlIndex = -1;
+
+// ======================= GITHUB API =======================
+const githubApi = axios.create({
+  baseURL: `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}`,
+  headers: {
+    Authorization: `Bearer ${GITHUB_TOKEN}`, // ✅ chuẩn GitHub token
+    Accept: "application/vnd.github.v3+json",
+  },
+});
+
+/**
+ * Commit nhiều file vào GitHub trong 1 lần commit
+ * @param {Array<{path: string, content: string|null, encoding?: string}>} files - File muốn commit (content=null nghĩa là xoá)
+ * @param {string} message - Commit message
+ */
+export const commitChanges = async (files, message) => {
+  if (!files || files.length === 0) {
+    console.log("⚠️ Không có file nào để commit.");
+    return;
+  }
+
+  try {
+    // 1. Lấy SHA commit mới nhất của branch
+    const { data: refData } = await githubApi.get(`/git/ref/heads/${BRANCH}`);
+    const parentCommitSha = refData.object.sha;
+
+    // 2. Lấy tree SHA từ commit đó
+    const { data: commitData } = await githubApi.get(`/git/commits/${parentCommitSha}`);
+    const baseTreeSha = commitData.tree.sha;
+
+    // 3. Tạo tree mới cho các file thay đổi
+    const tree = await Promise.all(
+      files.map(async (file) => {
+        if (file.content === null) {
+          // Xoá file
+          return { path: file.path, sha: null };
+        }
+
+        // Tạo blob cho file mới/cập nhật
+        const { data: blob } = await githubApi.post("/git/blobs", {
+          content: file.content,
+          encoding: file.encoding || "utf-8", // mặc định text, có thể truyền "base64"
+        });
+
+        return {
+          path: file.path,
+          mode: "100644",
+          type: "blob",
+          sha: blob.sha,
+        };
+      })
+    );
+
+    const { data: newTree } = await githubApi.post("/git/trees", {
+      base_tree: baseTreeSha,
+      tree: tree,
+    });
+
+    // 4. Tạo commit mới
+    const { data: newCommit } = await githubApi.post("/git/commits", {
+      message,
+      tree: newTree.sha,
+      parents: [parentCommitSha],
+    });
+
+    // 5. Cập nhật branch trỏ về commit mới
+    await githubApi.patch(`/git/refs/heads/${BRANCH}`, {
+      sha: newCommit.sha,
+      force: false,
+    });
+
+    console.log(`✅ Commit thành công ${files.length} file: ${message}`);
+  } catch (error) {
+    console.error("❌ Commit thất bại:");
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
+    } else {
+      console.error("Error:", error.message);
     }
   }
-  return [];
+};
+
+// ======================= URL STORE =======================
+async function readUrlStore() {
+  try {
+    const data = await fs.readFile(URL_STORE_FILE, "utf-8");
+    const urls = JSON.parse(data);
+
+    // Lọc URL còn hạn
+    const now = Date.now();
+    return urls.filter((u) => u.expiresAt > now);
+  } catch {
+    return [];
+  }
 }
 
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
-  updateGithubFile().catch((err) =>
-    console.error("❌ Lỗi cập nhật GitHub:", err.message)
-  );
+async function writeUrlStore(urls) {
+  await fs.writeFile(URL_STORE_FILE, JSON.stringify(urls, null, 2), "utf-8");
 }
 
-// ================== API ==================
+// ======================= API ROUTES =======================
 
-// Lấy toàn bộ email
-app.get("/api/emails", (req, res) => {
-  res.json(readData());
-});
+// --- "Hidden" API for URL Management --- //
 
-// Lấy 1 email theo ID
-app.get("/api/emails/:id", (req, res) => {
-  const emails = readData();
-  const email = emails.find((e) => e.id === parseInt(req.params.id));
-  if (!email) return res.status(404).json({ error: "Email không tồn tại" });
-  res.json(email);
-});
-
-// Thêm email
-app.post("/api/emails", (req, res) => {
-  const emails = readData();
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Thiếu email" });
-
-  if (emails.some((e) => e.email === email))
-    return res.status(400).json({ error: "Email đã tồn tại" });
-
-  const newId = emails.length ? Math.max(...emails.map((e) => e.id)) + 1 : 1;
-  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-
-  const newEmail = {
-    id: newId,
-    email,
-    proxy: null,
-    cookie: null,
-    status: "pending",
-    created_at: now,
-    updated_at: now,
-  };
-  emails.push(newEmail);
-  writeData(emails);
-
-  res.status(201).json(newEmail);
-});
-
-// Import nhiều email
-app.post("/api/emails/import", (req, res) => {
-  const { emails: importList } = req.body;
-  if (!Array.isArray(importList))
-    return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
-
-  const emails = readData();
-  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-  const existing = new Set(emails.map((e) => e.email));
-  let currentId = emails.length ? Math.max(...emails.map((e) => e.id)) + 1 : 1;
-
-  const newEmails = [];
-  for (const email of importList) {
-    if (!email || existing.has(email)) continue;
-    newEmails.push({
-      id: currentId++,
-      email,
-      proxy: null,
-      cookie: null,
-      status: "pending",
-      created_at: now,
-      updated_at: now,
-    });
-    existing.add(email);
+// API để thêm URL mới với thời gian sống 5 phút
+app.get("/add-url", async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ error: "URL parameter is required." });
   }
 
-  emails.push(...newEmails);
-  writeData(emails);
-
-  res.status(201).json(newEmails);
-});
-
-// Update trạng thái email theo ID
-app.put("/api/emails/:id", (req, res) => {
-  const { status } = req.body;
-  const valid = ["pending", "processing", "completed", "failed"];
-  if (!valid.includes(status))
-    return res.status(400).json({ error: "Trạng thái không hợp lệ" });
-
-  const emails = readData();
-  const idx = emails.findIndex((e) => e.id === parseInt(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: "Email không tồn tại" });
-
-  emails[idx].status = status;
-  emails[idx].updated_at = new Date()
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ");
-  writeData(emails);
-
-  res.json(emails[idx]);
-});
-
-// Xóa email theo ID
-app.delete("/api/emails/:id", (req, res) => {
-  let emails = readData();
-  const idx = emails.findIndex((e) => e.id === parseInt(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: "Email không tồn tại" });
-  const deleted = emails.splice(idx, 1)[0];
-  writeData(emails);
-  res.json(deleted);
-});
-
-// Xóa toàn bộ email
-app.delete("/api/emails", (req, res) => {
-  const count = readData().length;
-  writeData([]);
-  res.json({ deleted: count });
-});
-
-// Lấy 1 email pending và lock ngay
-app.get("/api/emails/next", (req, res) => {
-  const emails = readData();
-  const idx = emails.findIndex(
-    (e) => e.status === "pending" || e.status === "đang chờ"
-  );
-  if (idx === -1) return res.status(204).json("");
-  emails[idx].status = "processing";
-  emails[idx].updated_at = new Date().toISOString().slice(0, 19).replace("T", " ");
-  writeData(emails);
-  res.json(emails[idx].email);
-});
-
-// Cập nhật trạng thái theo email
-app.post("/api/emails/status", (req, res) => {
-  const { email, status } = req.body;
-  if (!email || !status)
-    return res.status(400).json({ error: "Thiếu email hoặc trạng thái" });
-
-  const valid = ["pending", "processing", "completed", "failed"];
-  if (!valid.includes(status))
-    return res.status(400).json({ error: "Trạng thái không hợp lệ" });
-
-  const emails = readData();
-  const idx = emails.findIndex((e) => e.email === email);
-  if (idx === -1) return res.status(404).json({ error: "Email không tồn tại" });
-
-  emails[idx].status = status;
-  emails[idx].updated_at = new Date().toISOString().slice(0, 19).replace("T", " ");
-  writeData(emails);
-
-  res.json(emails[idx]);
-});
-
-// ================== Hàm update GitHub ==================
-async function updateGithubFile() {
-  if (!fs.existsSync(FILEPATH)) return;
-  const content = fs.readFileSync(FILEPATH, "utf-8");
-  const b64Content = Buffer.from(content).toString("base64");
-
-  const url = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FILEPATH}`;
-  const headers = { Authorization: `Bearer ${GITHUB_TOKEN}` };
-
-  const { data: fileData } = await axios.get(url, { headers });
-  const sha = fileData?.sha;
-
-  const res = await axios.put(
-    url,
-    {
-      message: "Update emails.json via API",
-      content: b64Content,
-      branch: BRANCH,
-      sha,
-    },
-    { headers }
-  );
-
-  if (![200, 201].includes(res.status)) {
-    throw new Error("Update GitHub failed: " + res.statusText);
+  try {
+    const validUrls = await readUrlStore();
+    const expiresAt = Date.now() + URL_EXPIRATION_MS;
+    validUrls.push({ url, expiresAt });
+    await writeUrlStore(validUrls);
+    res.json({ message: "URL received and will be stored for 5 minutes." });
+  } catch (error) {
+    console.error("Error adding URL:", error);
+    res.status(500).json({ error: "Internal server error." });
   }
+});
 
-  console.log("✅ Cập nhật GitHub thành công!");
+// API để lấy URL theo kiểu xoay vòng
+app.get("/get-url", async (req, res) => {
+  try {
+    const validUrls = await readUrlStore();
+    if (validUrls.length === 0) {
+      return res.status(404).json({ error: "No valid URLs available." });
+    }
+
+    lastUrlIndex = (lastUrlIndex + 1) % validUrls.length;
+    const urlToServe = validUrls[lastUrlIndex];
+    res.json({ url: urlToServe.url });
+  } catch (error) {
+    console.error("Error getting URL:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// API để chuyển tiếp (redirect) đến URL xoay vòng
+app.get("/go", async (req, res) => {
+  try {
+    const validUrls = await readUrlStore();
+    if (validUrls.length === 0) {
+      return res
+        .status(404)
+        .send("<h1>404 - Not Found</h1><p>No valid URLs are available to redirect to.</p>");
+    }
+
+    lastUrlIndex = (lastUrlIndex + 1) % validUrls.length;
+    const urlToRedirect = validUrls[lastUrlIndex].url;
+
+    res.redirect(302, urlToRedirect);
+  } catch (error) {
+    console.error("Error redirecting to URL:", error);
+    res.status(500).send("<h1>500 - Internal Server Error</h1>");
+  }
+});
+
+// API để lấy số lượng URL hợp lệ
+app.get("/api/urls/count", async (req, res) => {
+  try {
+    const validUrls = await readUrlStore();
+    res.json({ count: validUrls.length });
+  } catch (error) {
+    console.error("Error getting URL count:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ======================= AUTO PING =======================
+async function selfPing() {
+  try {
+    const res = await axios.get(SELF_URL);
+    console.log("✅ Pinged:", SELF_URL, "Status:", res.status);
+  } catch (err) {
+    console.error("❌ Ping failed:", err.message);
+  }
 }
 
-// ================== Self ping ==================
-setInterval(() => {
-  const url = process.env.PING_URL || `http://localhost:${PORT}`;
-  axios
-    .get(url)
-    .then(() => console.log("Pinged:", url))
-    .catch((err) => console.log("Ping error:", err.message));
-}, 100000); // 5 phút
+setInterval(selfPing, 1 * 60 * 1000); // Ping mỗi 4 phút
 
-// ================== Start ==================
-app.listen(PORT, () => console.log(`🚀 Server chạy tại http://localhost:${PORT}`));
+// ======================= START SERVER =======================
+app.get("/", (req, res) => {
+  res.send("🚀 Server running with GitHub commit API + URL Manager + Auto Ping");
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  selfPing(); // Ping ngay khi khởi động
+});
