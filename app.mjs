@@ -1,7 +1,26 @@
-// ======================= IMPORTS =======================
 import express from "express";
 import fs from "fs/promises";
 import axios from "axios";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+const SELF_URL = "https://server-ebay-database.onrender.com/";
+
+// Lấy đường dẫn tuyệt đối tới thư mục hiện tại (vì dùng ES Module)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(cors());
+app.use(express.json());
+
+// ⚡ Route trả về giao diện index.html trong thư mục hiện tại
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
 
 // ======================= CONFIG =======================
 const app = express();
@@ -202,10 +221,7 @@ async function selfPing() {
 
 setInterval(selfPing, 1 * 60 * 1000); // Ping mỗi 4 phút
 
-// ======================= START SERVER =======================
-app.get("/", (req, res) => {
-  res.send("🚀 Server running with GitHub commit API + URL Manager + Auto Ping");
-});
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
