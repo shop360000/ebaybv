@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 10000;
 const DATA_DIR = path.join(__dirname, 'data');
 const URL_STORE_FILE = path.join(__dirname, 'urls.json');
 const URL_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
-
+const SELF_URL="https://server-ebay-database.onrender.com";
 let lastUrlIndex = -1; // Biến toàn cục để theo dõi URL xoay vòng
 
 // --- Initialization: Ensure data directory exists ---
