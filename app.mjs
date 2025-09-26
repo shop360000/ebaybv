@@ -9,6 +9,44 @@ import multer from 'multer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+// Lưu trữ các URL cần ping
+const pingUrls = new Set();
+
+// Hàm ping một URL
+const pingUrl = (url) => {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        https.get(url, (res) => {
+            const end = Date.now();
+            resolve({
+                url,
+                status: res.statusCode,
+                responseTime: end - start,
+                timestamp: new Date().toISOString()
+            });
+        }).on('error', (error) => {
+            resolve({
+                url,
+                status: 'error',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            });
+        });
+    });
+};
+
+// Ping tất cả URL mỗi phút
+setInterval(async () => {
+    const urls = Array.from(pingUrls);
+    for (const url of urls) {
+        try {
+            const result = await pingUrl(url);
+            console.log(`Ping result for ${url}:`, result);
+        } catch (error) {
+            console.error(`Error pinging ${url}:`, error);
+        }
+    }
+}, 60000); // 60 giây
 
 const app = express();
 const PORT = process.env.PORT || 10000;
