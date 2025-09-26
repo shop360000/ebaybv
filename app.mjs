@@ -223,7 +223,7 @@ setInterval(() => {
     .get(url)
     .then(() => console.log("Pinged:", url))
     .catch((err) => console.log("Ping error:", err.message));
-}, 300000); // 5 phút
+}, 100000); // 5 phút
 
 // ================== Start ==================
 app.listen(PORT, () => console.log(`🚀 Server chạy tại http://localhost:${PORT}`));
