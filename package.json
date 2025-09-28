@@ -1,7 +1,7 @@
 {
-  "name": "email-manager",
+  "name": "email-ping-manager",
   "version": "1.0.0",
-  "description": "Email management application",
+  "description": "Email management and Ping monitoring application",
   "main": "app.mjs",
   "type": "module",
   "scripts": {
@@ -14,7 +14,9 @@
     "express": "^4.18.2",
     "multer": "^2.0.2",
     "pg": "^8.11.3",
-    "pg-hstore": "^2.3.4"
+    "pg-hstore": "^2.3.4",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
