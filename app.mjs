@@ -8,44 +8,44 @@ import multer from 'multer';
 import https from 'https';
 import pingRouter from './ping.js';   // ✅ import module ping
 
+// --- Khởi tạo Express app ---
 const app = express();
 
-// Middleware
+// --- Middleware ---
 app.use(cors());
-app.use(express.json());                         // ✅ thay bodyParser
-app.use(express.urlencoded({ extended: true })); // ✅ thay bodyParser
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.static(dirname(fileURLToPath(import.meta.url))));
 
+// --- Biến môi trường & __dirname ---
 const PORT = process.env.PORT || 10000;
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// API routes cho Ping
+// --- API routes ---
 app.use("/api/ping", pingRouter);
 
-// giao diện ping.html
+// Giao diện ping.html
 app.get("/ping", (req, res) => {
   res.sendFile(path.join(__dirname, "ping.html"));
 });
 
-// Create data directory if it doesn't exist
+// Thư mục data
 const DATA_DIR = path.join(__dirname, 'data');
 const URL_STORE_FILE = path.join(DATA_DIR, 'urls.json');
 
-// Ensure data directory exists
+// Đảm bảo thư mục data tồn tại
 (async () => {
     try {
         await fs.mkdir(DATA_DIR, { recursive: true });
         console.log(`Data directory '${DATA_DIR}' is ready.`);
     } catch (error) {
-        if (error.code !== 'EEXIST') {
-            console.error('Error creating data directory:', error);
-            process.exit(1);
-        }
+        console.error('Error creating data directory:', error);
+        process.exit(1);
     }
 })();
 
-// Database configuration
+// --- Database config ---
 const { Pool } = pg;
 const pool = new Pool({
     user: 'db_ghip_user',
@@ -55,6 +55,16 @@ const pool = new Pool({
     port: 5432,
     ssl: { rejectUnauthorized: false }
 });
+
+// Test kết nối database
+pool.query('SELECT NOW()', (err, res) => {
+    if (err) {
+        console.error('Error connecting to the database:', err);
+    } else {
+        console.log('Successfully connected to the database at', res.rows[0].now);
+    }
+});
+
 
 // Khởi động server
 app.listen(PORT, () => {
