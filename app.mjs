@@ -5,35 +5,24 @@ import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import pg from 'pg';
 import multer from 'multer';
-import pingRouter from './ping.js'; // import module ping
+import pingRouter from './ping.js'; // module ping
 
-// --- Khởi tạo Express app ---
+// --- Express setup ---
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PORT = process.env.PORT || 10000;
 
 // --- Middleware ---
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// --- __dirname setup ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// --- Biến môi trường ---
-const PORT = process.env.PORT || 10000;
-
-// --- Static files ---
 app.use(express.static(__dirname));
 
-// --- API routes ---
-app.use("/api/ping", pingRouter);
+// --- Multer ---
+const upload = multer({ dest: 'uploads/' });
 
-// --- Route ping.html ---
-app.get("/ping", (req, res) => {
-    res.sendFile(path.join(__dirname, 'ping.html'));
-});
-
-// --- Database config ---
+// --- Database setup ---
 const { Pool } = pg;
 const pool = new Pool({
     user: 'db_ghip_user',
@@ -44,17 +33,14 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Test kết nối database
+// --- Test DB connection ---
 pool.query('SELECT NOW()', (err, res) => {
     if (err) console.error('Error connecting to database:', err);
     else console.log('Database connected at', res.rows[0].now);
 });
 
-// --- Thư mục data ---
+// --- Ensure data directory exists ---
 const DATA_DIR = path.join(__dirname, 'data');
-const URL_STORE_FILE = path.join(DATA_DIR, 'urls.json');
-
-// Đảm bảo thư mục data tồn tại
 (async () => {
     try {
         await fs.mkdir(DATA_DIR, { recursive: true });
@@ -65,8 +51,16 @@ const URL_STORE_FILE = path.join(DATA_DIR, 'urls.json');
     }
 })();
 
-// --- Multer setup cho upload ---
-const upload = multer({ dest: 'uploads/' });
+// --- Routes ---
+app.use("/api/ping", pingRouter);
+
+app.get("/ping", (req, res) => {
+    res.sendFile(path.join(__dirname, 'ping.html'));
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // --- Khởi động server ---
 app.listen(PORT, () => {
