@@ -9,45 +9,17 @@ import multer from 'multer';
 import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Lưu trữ các URL cần ping
-const pingUrls = new Set();
+const __dirname = path.dirname(__filename);
 
-// Hàm ping một URL
-const pingUrl = (url) => {
-    return new Promise((resolve) => {
-        const start = Date.now();
-        https.get(url, (res) => {
-            const end = Date.now();
-            resolve({
-                url,
-                status: res.statusCode,
-                responseTime: end - start,
-                timestamp: new Date().toISOString()
-            });
-        }).on('error', (error) => {
-            resolve({
-                url,
-                status: 'error',
-                error: error.message,
-                timestamp: new Date().toISOString()
-            });
-        });
-    });
-};
+app.use(bodyParser.json());
 
-// Ping tất cả URL mỗi phút
-setInterval(async () => {
-    const urls = Array.from(pingUrls);
-    for (const url of urls) {
-        try {
-            const result = await pingUrl(url);
-            console.log(`Ping result for ${url}:`, result);
-        } catch (error) {
-            console.error(`Error pinging ${url}:`, error);
-        }
-    }
-}, 60000); // 60 giây
+// API routes cho Ping
+app.use("/api/ping", pingRouter);
+
+// giao diện ping.html
+app.get("/ping", (req, res) => {
+  res.sendFile(path.join(__dirname, "ping.html"));
+});
 
 const app = express();
 const PORT = process.env.PORT || 10000;
