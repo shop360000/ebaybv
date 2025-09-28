@@ -7,6 +7,14 @@ import pg from 'pg';
 import { dirname } from 'path';
 import multer from 'multer';
 import https from 'https';
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());   // dòng này phải sau khi có app
+app.use(bodyParser.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 10000;
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,8 +29,7 @@ app.get("/ping", (req, res) => {
   res.sendFile(path.join(__dirname, "ping.html"));
 });
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+
 
 // Create data directory if it doesn't exist
 const DATA_DIR = path.join(__dirname, 'data');
