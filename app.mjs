@@ -1,25 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 import { promises as fs } from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
-import { dirname } from 'path';
 import multer from 'multer';
 import https from 'https';
+import pingRouter from './ping.js';   // ✅ import module ping
+
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());   // dòng này phải sau khi có app
-app.use(bodyParser.urlencoded({ extended: true }));
-const PORT = process.env.PORT || 10000;
+app.use(express.json());                         // ✅ thay bodyParser
+app.use(express.urlencoded({ extended: true })); // ✅ thay bodyParser
 
+const PORT = process.env.PORT || 10000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-app.use(bodyParser.json());
 
 // API routes cho Ping
 app.use("/api/ping", pingRouter);
@@ -28,8 +27,6 @@ app.use("/api/ping", pingRouter);
 app.get("/ping", (req, res) => {
   res.sendFile(path.join(__dirname, "ping.html"));
 });
-
-
 
 // Create data directory if it doesn't exist
 const DATA_DIR = path.join(__dirname, 'data');
@@ -56,9 +53,12 @@ const pool = new Pool({
     database: 'db_ghip',
     password: 'CuHnDo1hIo0RmtxDX28CbWs4sKX2lgQa',
     port: 5432,
-    ssl: {
-        rejectUnauthorized: false // For development only, use proper SSL in production
-    }
+    ssl: { rejectUnauthorized: false }
+});
+
+// Khởi động server
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 // Test the database connection
